@@ -1,4 +1,4 @@
-<h1>CNN encoder  
+<h1>CNN encoder</h1>  
 
 first raw of output is original image, 2nd is the image after autoencoder, 3rd is the 2nd feature map after 2 layers convolution.  
 

@@ -37,18 +37,20 @@ def encoder1(x):
     W_conv1 = weight_variable([5, 5, 1, 32])
     b_conv1 = bias_variable([32])
     x_image = tf.reshape(x, [-1,28,28,1])
-    h_conv1 = tf.nn.relu(conv_2d(x_image, W_conv1) + b_conv1)
+    conv1s = conv_2d(x_image, W_conv1) + b_conv1
+    h_conv1 = tf.nn.relu(conv1s)
     h_pool1 = max_pool_2x2(h_conv1)
 
 
     W_conv2 = weight_variable([5, 5, 32, 64])
     b_conv2 = bias_variable([64])
-    h_conv2 = tf.nn.relu(conv_2d(h_pool1, W_conv2) + b_conv2)
+    conv2s = conv_2d(h_pool1, W_conv2) + b_conv2
+    h_conv2 = tf.nn.relu(conv2s)
     h_pool2 = max_pool_2x2(h_conv2)
     w_conv3 = weight_variable([4,4,64,128])
     b_conv3 = bias_variable([128])
     h_out = tf.nn.relu(tf.nn.conv2d(h_pool2,w_conv3,strides = [1,1,1,1],padding = 'VALID')+b_conv3)
-    return h_out
+    return conv2s,h_out
 
 def decoder1(x):
     w_fc1 = weight_variable([4 * 4 * 128,128])
@@ -65,7 +67,10 @@ def decoder1(x):
     
 
 print("helo")
-encoder_op = encoder1(x_image)
+conv2,encoder_op = encoder1(x_image)
+#sess.run(tf.transpose(conv2, [3, 0, 1, 2]))
+
+print("conv layer",conv2)
 decoder_op = decoder1(encoder_op)
 
 # Prediction
@@ -75,31 +80,38 @@ y_true = X
 # Define loss and optimizer, minimize the squared error
 cost = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
 optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
-print("ca")
+#print("ca")
 # Launch the graph
 with tf.Session() as sess:
     init = tf.global_variables_initializer()
     sess.run(init)
     total_batch = int(mnist.train.num_examples/batch_size)   
-    for epoch in range(training_epochs):        
+    for epoch in range(30):
         # Loop over all batches
         for i in range(50):
-            print(i)
             batch_xs, batch_ys = mnist.train.next_batch(batch_size)  # max(x) = 1, min(x) = 0
             # Run optimization op (backprop) and cost op (to get loss value)
             _, c = sess.run([optimizer, cost], feed_dict={X: batch_xs})
         # Display logs per epoch step
-        if epoch % display_step == 0:
+        if epoch % display_step == 10:
             print("Epoch:", '%04d' % (epoch+1),
                   "cost=", "{:.9f}".format(c))
     print("Optimization Finished!")
     # # Applying encode and decode over test set
+    #sess.run(tf.transpose(conv2, [3, 0, 1, 2]))
     encode_decode = sess.run(
         y_pred, feed_dict={X: mnist.test.images[:examples_to_show]})
+    lay_show = sess.run(
+        conv2 , feed_dict={X: mnist.test.images[:examples_to_show]})
+    #print("this is lay show",lay_show)
+    lay_show=sess.run(tf.transpose(lay_show, [3, 0, 1, 2]))
+    lay_show=lay_show[0]
+    print("medle shape",np.asarray(lay_show).shape)
     # Compare original images with their reconstructions
-    f, a = plt.subplots(2, 10, figsize=(10, 2))
+    f, a = plt.subplots(3, 10, figsize=(10, 3))
     for i in range(examples_to_show):
         a[0][i].imshow(np.reshape(mnist.test.images[i], (28, 28)))
         a[1][i].imshow(np.reshape(encode_decode[i], (28, 28)))
+        a[2][i].imshow(lay_show[i])
     plt.show()
     
